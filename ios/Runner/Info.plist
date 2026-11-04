@@ -24,6 +24,20 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Poseidon memerlukan akses lokasi Anda untuk menampilkan posisi saat ini di peta parkir kampus.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Poseidon memerlukan akses lokasi Anda untuk menampilkan posisi saat ini di peta parkir kampus.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Poseidon memerlukan akses kamera untuk memfoto bukti kendala parkir pada halaman laporan.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Poseidon memerlukan akses galeri untuk melampirkan foto bukti kendala parkir dari perangkat Anda.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+		<string>https</string>
+		<string>whatsapp</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

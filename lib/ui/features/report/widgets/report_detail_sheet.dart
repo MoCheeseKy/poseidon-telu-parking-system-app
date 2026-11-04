@@ -83,8 +83,63 @@ class ReportDetailSheet extends StatelessWidget {
     );
   }
 
+  Widget _buildEvidencePreview() {
+    if (report.attachmentBytes != null) {
+      return Image.memory(
+        report.attachmentBytes!,
+        height: 190.0,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    }
+
+    if (report.imageAttachment != null && report.imageAttachment!.isNotEmpty) {
+      return Image.asset(
+        report.imageAttachment!,
+        height: 190.0,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          return Container(
+            height: 190.0,
+            width: double.infinity,
+            color: const Color(0xFFE2E8F0),
+            child: const Center(
+              child: Icon(
+                Icons.image_outlined,
+                size: 40.0,
+                color: AppColors.textMuted,
+              ),
+            ),
+          );
+        },
+      );
+    }
+
+    return Container(
+      height: 100.0,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF9FAFB),
+        borderRadius: BorderRadius.circular(12.0),
+        border: Border.all(color: const Color(0xFFE5E7EB)),
+      ),
+      child: const Center(
+        child: Text(
+          'Tidak ada lampiran foto bukti',
+          style: TextStyle(
+            fontSize: 12.5,
+            color: AppColors.textSecondary,
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final hasPhoto = report.hasPhotoEvidence;
+
     return Container(
       decoration: const BoxDecoration(
         color: Colors.white,
@@ -271,58 +326,38 @@ class ReportDetailSheet extends StatelessWidget {
                       child: Stack(
                         alignment: Alignment.bottomRight,
                         children: [
-                          Image.asset(
-                            report.imageAttachment ??
-                                'assets/images/parking_evidence.jpg',
-                            height: 190.0,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                height: 190.0,
-                                width: double.infinity,
-                                color: const Color(0xFFE2E8F0),
-                                child: const Center(
-                                  child: Icon(
+                          _buildEvidencePreview(),
+                          if (hasPhoto)
+                            Container(
+                              margin: const EdgeInsets.all(10.0),
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10.0,
+                                vertical: 4.5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withValues(alpha: 0.65),
+                                borderRadius: BorderRadius.circular(8.0),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
                                     Icons.image_outlined,
-                                    size: 40.0,
-                                    color: AppColors.textMuted,
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                          // Badge: 1 Lampiran (JPG)
-                          Container(
-                            margin: const EdgeInsets.all(10.0),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10.0,
-                              vertical: 4.5,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withValues(alpha: 0.65),
-                              borderRadius: BorderRadius.circular(8.0),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(
-                                  Icons.image_outlined,
-                                  color: Colors.white,
-                                  size: 13.0,
-                                ),
-                                const SizedBox(width: 5.0),
-                                Text(
-                                  report.attachmentBadge,
-                                  style: const TextStyle(
                                     color: Colors.white,
-                                    fontSize: 11.0,
-                                    fontWeight: FontWeight.w600,
+                                    size: 13.0,
                                   ),
-                                ),
-                              ],
+                                  const SizedBox(width: 5.0),
+                                  Text(
+                                    report.attachmentBadge,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 11.0,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
                         ],
                       ),
                     ),

@@ -1,21 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:poseidon/core/constants/app_colors.dart';
+import 'package:poseidon/data/mock/mock_building_data.dart';
 import 'package:poseidon/data/mock/mock_parking_data.dart';
 import 'package:poseidon/data/models/building_distance.dart';
 import 'package:poseidon/data/models/parking_location.dart';
+import 'package:poseidon/services/recommendation_service.dart';
 import 'package:poseidon/ui/core/widgets/drag_handle.dart';
 
 class ParkingDetailSheet extends StatefulWidget {
   final ParkingLocation? location;
   final List<BuildingDistance>? buildingDistances;
+  final VoidCallback? onStartNavigation;
 
-  const ParkingDetailSheet({super.key, this.location, this.buildingDistances});
+  const ParkingDetailSheet({
+    super.key,
+    this.location,
+    this.buildingDistances,
+    this.onStartNavigation,
+  });
 
   /// Helper to display the Parking Detail as a modal bottom sheet
   static Future<void> show(
     BuildContext context, {
     ParkingLocation? location,
     List<BuildingDistance>? buildingDistances,
+    VoidCallback? onStartNavigation,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -27,6 +36,7 @@ class ParkingDetailSheet extends StatefulWidget {
       builder: (context) => ParkingDetailSheet(
         location: location,
         buildingDistances: buildingDistances,
+        onStartNavigation: onStartNavigation,
       ),
     );
   }
@@ -36,6 +46,9 @@ class ParkingDetailSheet extends StatefulWidget {
 }
 
 class _ParkingDetailSheetState extends State<ParkingDetailSheet> {
+  static const RecommendationService _recommendationService =
+      RecommendationService();
+
   late VehicleType _selectedVehicle;
   bool _isBookmarked = false;
 
@@ -59,12 +72,40 @@ class _ParkingDetailSheetState extends State<ParkingDetailSheet> {
     });
   }
 
+  Color _statusColorFor(ParkingStatus status) {
+    switch (status) {
+      case ParkingStatus.available:
+        return AppColors.statusGreen;
+      case ParkingStatus.warning:
+        return AppColors.statusOrange;
+      case ParkingStatus.full:
+        return AppColors.statusRed;
+      case ParkingStatus.offline:
+        return AppColors.statusGrey;
+    }
+  }
+
+  List<BuildingDistance> _resolveDistances(ParkingLocation loc) {
+    if (widget.buildingDistances != null) {
+      return widget.buildingDistances!;
+    }
+    if (widget.location == null) {
+      return MockParkingData.tultNearestBuildings;
+    }
+    final computed = _recommendationService.calculateNearestBuildings(
+      location: loc,
+      buildings: MockBuildingData.getAllBuildings(),
+      limit: 3,
+    );
+    return computed.isNotEmpty ? computed : MockParkingData.tultNearestBuildings;
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Default to TULT data matching reference image
+    // Default to TULT data matching reference image when previewed standalone
     final loc = widget.location ?? MockParkingData.tultParking;
-    final distances =
-        widget.buildingDistances ?? MockParkingData.tultNearestBuildings;
+    final distances = _resolveDistances(loc);
+    final statusColor = _statusColorFor(loc.status);
 
     return SafeArea(
       top: false,
@@ -95,7 +136,9 @@ class _ParkingDetailSheetState extends State<ParkingDetailSheet> {
                 ),
                 const SizedBox(height: 4.0),
                 Text(
-                  loc.subArea.isNotEmpty ? loc.subArea : 'Kawasan Fakultas Informatika (FIF) & Fakultas Kedokteran (FK)',
+                  loc.subArea.isNotEmpty
+                      ? loc.subArea
+                      : 'Kawasan Fakultas Informatika (FIF) & Fakultas Kedokteran (FK)',
                   style: const TextStyle(
                     fontSize: 13.0,
                     fontWeight: FontWeight.w500,
@@ -174,10 +217,10 @@ class _ParkingDetailSheetState extends State<ParkingDetailSheet> {
                         children: [
                           Text(
                             '${loc.availableSlots}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 28.0,
                               fontWeight: FontWeight.w800,
-                              color: AppColors.statusGreen,
+                              color: statusColor,
                             ),
                           ),
                           const SizedBox(width: 6.0),
@@ -208,7 +251,7 @@ class _ParkingDetailSheetState extends State<ParkingDetailSheet> {
                 ),
                 const SizedBox(height: 8.0),
 
-                // Progress Bar (84 / 250 available)
+                // Progress Bar
                 ClipRRect(
                   borderRadius: BorderRadius.circular(4.0),
                   child: Container(
@@ -218,7 +261,7 @@ class _ParkingDetailSheetState extends State<ParkingDetailSheet> {
                     child: FractionallySizedBox(
                       alignment: Alignment.centerLeft,
                       widthFactor: loc.availabilityRatio,
-                      child: Container(color: AppColors.statusGreen),
+                      child: Container(color: statusColor),
                     ),
                   ),
                 ),
@@ -281,10 +324,20 @@ class _ParkingDetailSheetState extends State<ParkingDetailSheet> {
                         height: 48.0,
                         child: ElevatedButton(
                           onPressed: () {
-                            ScaffoldMessenger.of(context).showSnackBar(
+                            final messenger = ScaffoldMessenger.maybeOf(
+                              context,
+                            );
+                            if (widget.onStartNavigation != null) {
+                              widget.onStartNavigation!();
+                              if (Navigator.of(context).canPop()) {
+                                Navigator.of(context).pop();
+                              }
+                            }
+                            messenger?.hideCurrentSnackBar();
+                            messenger?.showSnackBar(
                               SnackBar(
                                 content: Text(
-                                  'Memulai navigasi rute ke ${loc.name}...',
+                                  'Memulai panduan arah ke ${loc.name}...',
                                 ),
                                 duration: const Duration(seconds: 2),
                                 backgroundColor: AppColors.textPrimary,

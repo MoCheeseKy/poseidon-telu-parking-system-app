@@ -47,7 +47,7 @@ class AppBottomNavBar extends StatelessWidget {
                     label: 'Laporan',
                     index: 1,
                   ),
-                  const SizedBox(width: 78.0), // Space for center FAB
+                  const SizedBox(width: 78.0), 
                   _buildNavItem(
                     icon: Icons.history,
                     label: 'Aktivitas',
@@ -110,7 +110,7 @@ class AppBottomNavBar extends StatelessWidget {
     required int index,
   }) {
     final isSelected = currentIndex == index;
-    final color = isSelected ? AppColors.textPrimary : const Color(0xFF686B73);
+    final color = isSelected ? AppColors.primaryRed : const Color(0xFF686B73);
 
     return Expanded(
       child: InkWell(
@@ -124,7 +124,7 @@ class AppBottomNavBar extends StatelessWidget {
               label,
               style: TextStyle(
                 fontSize: 10.5,
-                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: color,
               ),
             ),

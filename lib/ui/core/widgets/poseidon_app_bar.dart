@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:poseidon/core/constants/app_colors.dart';
+import 'package:poseidon/data/mock/mock_notification_data.dart';
+import 'package:poseidon/ui/core/widgets/poseidon_brand_logo.dart';
+import 'package:poseidon/ui/features/notifications/views/notification_screen.dart';
 
 class PoseidonAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onNotificationTap;
@@ -33,23 +36,9 @@ class PoseidonAppBar extends StatelessWidget implements PreferredSizeWidget {
               height: 30.0,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stackTrace) {
-                return Container(
-                  width: 30.0,
-                  height: 30.0,
-                  decoration: BoxDecoration(
-                    color: AppColors.primaryRed,
-                    borderRadius: BorderRadius.circular(8.0),
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'P',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 18.0,
-                      ),
-                    ),
-                  ),
+                return const PoseidonBrandLogo(
+                  size: 30.0,
+                  borderRadius: 8.0,
                 );
               },
             ),
@@ -71,14 +60,43 @@ class PoseidonAppBar extends StatelessWidget implements PreferredSizeWidget {
         ],
       ),
       actions: [
-        IconButton(
-          tooltip: 'Notifikasi',
-          icon: const Icon(
-            Icons.notifications_none_outlined,
-            color: AppColors.textPrimary,
-            size: 24.0,
-          ),
-          onPressed: onNotificationTap ?? () {},
+        ListenableBuilder(
+          listenable: MockNotificationData.sharedStore,
+          builder: (context, _) {
+            final unreadCount = MockNotificationData.sharedStore.unreadCount;
+            return IconButton(
+              tooltip: 'Notifikasi',
+              onPressed:
+                  onNotificationTap ??
+                  () {
+                    Navigator.push(context, NotificationScreen.route());
+                  },
+              icon: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  const Icon(
+                    Icons.notifications_none_outlined,
+                    color: AppColors.textPrimary,
+                    size: 24.0,
+                  ),
+                  if (unreadCount > 0)
+                    Positioned(
+                      right: 1.0,
+                      top: 1.0,
+                      child: Container(
+                        width: 8.0,
+                        height: 8.0,
+                        decoration: BoxDecoration(
+                          color: AppColors.avatarDeepRed,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 1.2),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            );
+          },
         ),
         GestureDetector(
           onTap: onProfileTap ?? () {},
@@ -87,11 +105,11 @@ class PoseidonAppBar extends StatelessWidget implements PreferredSizeWidget {
             width: 34.0,
             height: 34.0,
             decoration: const BoxDecoration(
-              color: AppColors.primaryRed,
+              color: AppColors.avatarDeepRed,
               shape: BoxShape.circle,
             ),
             child: const Center(
-              child: Icon(Icons.person, color: Colors.white, size: 20.0),
+              child: Icon(Icons.person_outline, color: Colors.white, size: 19.0),
             ),
           ),
         ),

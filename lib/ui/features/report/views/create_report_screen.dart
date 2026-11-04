@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:poseidon/core/constants/app_colors.dart';
 import 'package:poseidon/data/mock/mock_parking_data.dart';
 import 'package:poseidon/data/models/report_item.dart';
+import 'package:poseidon/services/report_media_service.dart';
+import 'package:poseidon/ui/core/widgets/drag_handle.dart';
+import 'package:poseidon/ui/core/widgets/poseidon_sub_app_bar.dart';
 import 'package:poseidon/ui/features/report/widgets/review_report_sheet.dart';
 
 class CategoryOption {
@@ -13,17 +16,23 @@ class CategoryOption {
 
 class CreateReportScreen extends StatefulWidget {
   final ValueChanged<ReportItem> onReportCreated;
+  final ReportMediaService mediaService;
 
   const CreateReportScreen({
     super.key,
     required this.onReportCreated,
+    this.mediaService = const ReportMediaService(),
   });
 
-  static MaterialPageRoute route({
+  static MaterialPageRoute<void> route({
     required ValueChanged<ReportItem> onReportCreated,
+    ReportMediaService mediaService = const ReportMediaService(),
   }) {
-    return MaterialPageRoute(
-      builder: (_) => CreateReportScreen(onReportCreated: onReportCreated),
+    return MaterialPageRoute<void>(
+      builder: (_) => CreateReportScreen(
+        onReportCreated: onReportCreated,
+        mediaService: mediaService,
+      ),
     );
   }
 
@@ -60,11 +69,15 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
 
   late String _selectedCategory;
   late String _selectedLocation;
-  bool _hasPhotoAttached = true; // Default true as per design preview
+  bool _hasDefaultSamplePhoto = true;
+  CapturedReportPhoto? _capturedPhoto;
+  bool _isPickingPhoto = false;
 
   late final List<String> _parkingLocations = MockParkingData.allLocations
       .map((loc) => loc.name)
       .toList();
+
+  bool get _hasAnyPhoto => _capturedPhoto != null || _hasDefaultSamplePhoto;
 
   @override
   void initState() {
@@ -84,10 +97,196 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
     super.dispose();
   }
 
+  void _showFeedbackSnackBar(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          duration: const Duration(seconds: 2),
+          backgroundColor: AppColors.textPrimary,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10.0),
+          ),
+          content: Text(
+            message,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+      );
+  }
+
+  Future<void> _handleCaptureFromCamera() async {
+    if (_isPickingPhoto) return;
+    setState(() => _isPickingPhoto = true);
+    try {
+      final result = await widget.mediaService.captureFromCamera(context);
+      if (!mounted) return;
+      if (result != null) {
+        setState(() {
+          _capturedPhoto = result;
+          _hasDefaultSamplePhoto = false;
+        });
+        _showFeedbackSnackBar('Foto bukti dari kamera dilampirkan.');
+      }
+    } catch (_) {
+      _showFeedbackSnackBar(
+        'Kamera tidak dapat diakses. Periksa izin kamera perangkat.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isPickingPhoto = false);
+      }
+    }
+  }
+
+  Future<void> _handlePickFromSystem() async {
+    if (_isPickingPhoto) return;
+    setState(() => _isPickingPhoto = true);
+    try {
+      final result = await widget.mediaService.pickFromSystem();
+      if (!mounted) return;
+      if (result != null) {
+        setState(() {
+          _capturedPhoto = result;
+          _hasDefaultSamplePhoto = false;
+        });
+        _showFeedbackSnackBar('Foto bukti berhasil dipilih.');
+      }
+    } catch (_) {
+      _showFeedbackSnackBar(
+        'Gagal membuka galeri atau penyimpanan perangkat.',
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isPickingPhoto = false);
+      }
+    }
+  }
+
+  void _removePhotoAttachment() {
+    setState(() {
+      _capturedPhoto = null;
+      _hasDefaultSamplePhoto = false;
+    });
+  }
+
+  void _openPhotoSourceSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
+        return Container(
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24.0)),
+          ),
+          padding: const EdgeInsets.fromLTRB(20.0, 8.0, 20.0, 20.0),
+          child: SafeArea(
+            top: false,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const DragHandle(),
+                const Text(
+                  'Lampirkan Foto Bukti',
+                  style: TextStyle(
+                    fontSize: 18.0,
+                    fontWeight: FontWeight.w800,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 12.0),
+                const Divider(height: 1.0, color: Color(0xFFF1F3F5)),
+                _buildSourceRow(
+                  icon: Icons.camera_alt_outlined,
+                  title: 'Ambil Foto dari Kamera',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _handleCaptureFromCamera();
+                  },
+                ),
+                const Divider(height: 1.0, color: Color(0xFFF1F3F5)),
+                _buildSourceRow(
+                  icon: Icons.photo_library_outlined,
+                  title: 'Pilih dari Galeri atau Sistem',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    _handlePickFromSystem();
+                  },
+                ),
+                if (_hasAnyPhoto) ...[
+                  const Divider(height: 1.0, color: Color(0xFFF1F3F5)),
+                  _buildSourceRow(
+                    icon: Icons.delete_outline_rounded,
+                    title: 'Hapus Foto Terlampir',
+                    isDestructive: true,
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      _removePhotoAttachment();
+                    },
+                  ),
+                ],
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildSourceRow({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    bool isDestructive = false,
+  }) {
+    final color =
+        isDestructive ? AppColors.avatarDeepRed : AppColors.textPrimary;
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 15.0, horizontal: 4.0),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 20.0,
+              color: isDestructive
+                  ? AppColors.avatarDeepRed
+                  : const Color(0xFF525866),
+            ),
+            const SizedBox(width: 14.0),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14.0,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+              ),
+            ),
+            if (!isDestructive)
+              const Icon(
+                Icons.chevron_right_rounded,
+                size: 20.0,
+                color: Color(0xFF6B7280),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _openReviewSheet() {
+    final captured = _capturedPhoto;
     final draft = ReportItem(
       id: 'rep_${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-      reportNumber: '#R-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}-020326',
+      reportNumber:
+          '#R-${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}-020326',
       title: _selectedCategory == 'Parkir menghalangi akses'
           ? 'Parkir Menghalangi Akses Keluar Parkiran'
           : _selectedCategory,
@@ -95,16 +294,22 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
           ? 'Laporkan anomali yang anda temukan di sekitar area parkir untuk kami tindak lanjuti'
           : _descController.text.trim(),
       status: ReportStatus.sedangDitinjau,
-      timestamp: '18 Agustur 1945, 18:00 WIB',
-      reportDate: '18 Agustus 1945',
-      reportTime: '18:00 WIB',
+      timestamp: 'Baru saja',
+      reportDate: 'Hari ini',
+      reportTime: 'WIB',
       locationName: _selectedLocation,
       specificLocation: _specificLocationController.text.trim().isEmpty
           ? null
           : _specificLocationController.text.trim(),
       category: _selectedCategory,
-      imageAttachment: 'assets/images/parking_evidence.jpg',
-      attachmentBadge: '1 Lampiran (JPG)',
+      imageAttachment: _hasDefaultSamplePhoto
+          ? 'assets/images/parking_evidence.jpg'
+          : null,
+      attachmentBytes: captured?.bytes,
+      attachmentFileName: captured?.fileName,
+      attachmentBadge: captured != null
+          ? captured.badgeLabel
+          : (_hasDefaultSamplePhoto ? '1 Lampiran (JPG)' : 'Tanpa Lampiran'),
       notes: 'Laporan telah diteruskan ke petugas patroli lapangan.',
     );
 
@@ -135,51 +340,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.pageBackground,
-      appBar: AppBar(
-        backgroundColor: Colors.white,
-        surfaceTintColor: Colors.transparent,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back,
-            color: AppColors.textPrimary,
-            size: 22.0,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
-        titleSpacing: 0,
-        title: const Text(
-          'Buat Laporan',
-          style: TextStyle(
-            fontSize: 16.5,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.notifications_none_outlined,
-              color: AppColors.textPrimary,
-              size: 22.0,
-            ),
-            onPressed: () {},
-          ),
-          Container(
-            margin: const EdgeInsets.only(right: 16.0, left: 4.0),
-            width: 32.0,
-            height: 32.0,
-            decoration: const BoxDecoration(
-              color: AppColors.primaryRed,
-              shape: BoxShape.circle,
-            ),
-            child: const Center(
-              child: Icon(Icons.person, color: Colors.white, size: 18.0),
-            ),
-          ),
-        ],
-      ),
+      appBar: const PoseidonSubAppBar(title: 'Buat Laporan'),
       body: SafeArea(
         child: Center(
           child: ConstrainedBox(
@@ -430,6 +591,80 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                       ),
                       const SizedBox(height: 10.0),
                       _buildPhotoUploadBox(),
+                      const SizedBox(height: 10.0),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _isPickingPhoto
+                                  ? null
+                                  : _handleCaptureFromCamera,
+                              icon: const Icon(
+                                Icons.camera_alt_outlined,
+                                size: 17.0,
+                                color: Color(0xFF374151),
+                              ),
+                              label: const Text(
+                                'Buka Kamera',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                side: const BorderSide(
+                                  color: Color(0xFFE5E7EB),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10.0,
+                                  vertical: 11.0,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10.0),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10.0),
+                          Expanded(
+                            child: OutlinedButton.icon(
+                              onPressed: _isPickingPhoto
+                                  ? null
+                                  : _handlePickFromSystem,
+                              icon: const Icon(
+                                Icons.photo_library_outlined,
+                                size: 17.0,
+                                color: Color(0xFF374151),
+                              ),
+                              label: const Text(
+                                'Pilih dari Sistem',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 12.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
+                              style: OutlinedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                side: const BorderSide(
+                                  color: Color(0xFFE5E7EB),
+                                ),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10.0,
+                                  vertical: 11.0,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10.0),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
                   ),
                 ),
@@ -480,7 +715,7 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16.0),
-        border: Border.all(color: const Color(0xFFF1F1F1)),
+        border: Border.all(color: AppColors.subtleCardBorder),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -551,13 +786,13 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
                 ),
               ),
             ),
-            // Custom Radio Indicator
             Container(
               width: 18.0,
               height: 18.0,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: isSelected ? Colors.transparent : const Color(0xFFE5E7EB),
+                color:
+                    isSelected ? Colors.transparent : const Color(0xFFE5E7EB),
                 border: isSelected
                     ? Border.all(color: AppColors.primaryRed, width: 2.0)
                     : null,
@@ -647,12 +882,87 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
   }
 
   Widget _buildPhotoUploadBox() {
+    final captured = _capturedPhoto;
+
+    if (captured != null) {
+      return GestureDetector(
+        onTap: _openPhotoSourceSheet,
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12.0),
+          child: Stack(
+            children: [
+              Image.memory(
+                captured.bytes,
+                height: 176.0,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+              Positioned(
+                top: 10.0,
+                right: 10.0,
+                child: Material(
+                  color: Colors.black.withValues(alpha: 0.62),
+                  shape: const CircleBorder(),
+                  child: InkWell(
+                    customBorder: const CircleBorder(),
+                    onTap: _removePhotoAttachment,
+                    child: const Padding(
+                      padding: EdgeInsets.all(6.0),
+                      child: Icon(
+                        Icons.close_rounded,
+                        size: 17.0,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                left: 10.0,
+                bottom: 10.0,
+                right: 10.0,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10.0,
+                    vertical: 6.0,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.65),
+                    borderRadius: BorderRadius.circular(9.0),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        captured.source == ReportPhotoSource.camera
+                            ? Icons.camera_alt_outlined
+                            : Icons.photo_library_outlined,
+                        color: Colors.white,
+                        size: 14.0,
+                      ),
+                      const SizedBox(width: 6.0),
+                      Expanded(
+                        child: Text(
+                          'Foto terlampir: ${captured.fileName}',
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return GestureDetector(
-      onTap: () {
-        setState(() {
-          _hasPhotoAttached = !_hasPhotoAttached;
-        });
-      },
+      onTap: _openPhotoSourceSheet,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 16.0),
@@ -683,9 +993,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
             ),
             const SizedBox(height: 10.0),
             Text(
-              _hasPhotoAttached
+              _hasDefaultSamplePhoto
                   ? 'Foto terlampir: parking_evidence.jpg'
                   : 'Lampirkan foto bukti',
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 13.5,
                 fontWeight: FontWeight.w700,
@@ -694,9 +1005,10 @@ class _CreateReportScreenState extends State<CreateReportScreen> {
             ),
             const SizedBox(height: 4.0),
             Text(
-              _hasPhotoAttached
+              _hasDefaultSamplePhoto
                   ? 'Ketuk untuk mengganti atau menghapus foto'
                   : 'Format JPG atau PNG, maks. 5MB',
+              textAlign: TextAlign.center,
               style: const TextStyle(
                 fontSize: 11.5,
                 color: AppColors.textSecondary,

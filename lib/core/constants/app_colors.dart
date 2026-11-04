@@ -7,15 +7,18 @@ class AppColors {
   // Brand & Primary
   static const Color primaryRed = Color(0xFFE53935);
   static const Color primaryRedDark = Color(0xFFDC2626);
+  static const Color avatarDeepRed = Color(0xFFC8102E);
 
   // Backgrounds & Surfaces
   static const Color background = Color(0xFFFFFFFF);
-  static const Color pageBackground = Color(0xFFFAF7F7);
+  static const Color pageBackground = Color(0xFFFDF6F6);
+  static const Color softRedTint = Color(0xFFFAF2F2);
   static const Color chipBackground = Color(0xFFEFF1F4);
   static const Color surfaceGrey = Color(0xFFF9FAFB);
   static const Color cardSurface = Color(0xFFF3F4F6);
   static const Color lightGrey = Color(0xFFF4F5F7);
   static const Color border = Color(0xFFE5E7EB);
+  static const Color subtleCardBorder = Color(0xFFF3ECEC);
   static const Color dragHandle = Color(0xFFD1D5DB);
 
   // Typography

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:poseidon/core/theme/app_theme.dart';
+import 'package:poseidon/services/location_service.dart';
 import 'package:poseidon/ui/features/home/views/home_map_screen.dart';
 
 void main() {
@@ -7,7 +8,12 @@ void main() {
 }
 
 class PoseidonApp extends StatelessWidget {
-  const PoseidonApp({super.key});
+  final LocationService locationService;
+
+  const PoseidonApp({
+    super.key,
+    this.locationService = const LocationService(),
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +21,7 @@ class PoseidonApp extends StatelessWidget {
       title: 'Poseidon Smart Parking',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const HomeMapScreen(),
+      home: HomeMapScreen(locationService: locationService),
     );
   }
 }

@@ -45,6 +45,15 @@ class ParkingLocation {
 
   LatLng get coordinates => LatLng(latitude, longitude);
 
+  bool get hasValidCoordinates =>
+      latitude.isFinite &&
+      longitude.isFinite &&
+      latitude >= -90.0 &&
+      latitude <= 90.0 &&
+      longitude >= -180.0 &&
+      longitude <= 180.0 &&
+      !(latitude == 0.0 && longitude == 0.0);
+
   String get displayMapName => mapName ?? name;
 
   double get availabilityRatio =>

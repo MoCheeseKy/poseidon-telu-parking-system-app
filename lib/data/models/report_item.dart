@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter/material.dart';
 
 enum ReportStatus {
@@ -21,22 +23,22 @@ extension ReportStatusExtension on ReportStatus {
   Color get backgroundColor {
     switch (this) {
       case ReportStatus.selesai:
-        return const Color(0xFFE8F5E9); // soft light green
+        return const Color(0xFFE8F5E9); 
       case ReportStatus.sedangDitinjau:
-        return const Color(0xFFFEF3C7); // soft light amber
+        return const Color(0xFFFEF3C7); 
       case ReportStatus.ditindaklanjuti:
-        return const Color(0xFFFEE2E2); // soft light pink/red
+        return const Color(0xFFFEE2E2); 
     }
   }
 
   Color get textColor {
     switch (this) {
       case ReportStatus.selesai:
-        return const Color(0xFF16A34A); // green text
+        return const Color(0xFF16A34A); 
       case ReportStatus.sedangDitinjau:
-        return const Color(0xFFD97706); // amber text
+        return const Color(0xFFD97706); 
       case ReportStatus.ditindaklanjuti:
-        return const Color(0xFFDC2626); // red text
+        return const Color(0xFFDC2626); 
     }
   }
 }
@@ -54,6 +56,8 @@ class ReportItem {
   final String? specificLocation;
   final String? category;
   final String? imageAttachment;
+  final Uint8List? attachmentBytes;
+  final String? attachmentFileName;
   final String attachmentBadge;
   final String? notes;
 
@@ -70,9 +74,15 @@ class ReportItem {
     this.specificLocation,
     this.category,
     this.imageAttachment = 'assets/images/parking_evidence.jpg',
+    this.attachmentBytes,
+    this.attachmentFileName,
     this.attachmentBadge = '1 Lampiran (JPG)',
     this.notes,
   });
+
+  bool get hasPhotoEvidence =>
+      attachmentBytes != null ||
+      (imageAttachment != null && imageAttachment!.isNotEmpty);
 
   ReportItem copyWith({
     String? id,
@@ -87,6 +97,8 @@ class ReportItem {
     String? specificLocation,
     String? category,
     String? imageAttachment,
+    Uint8List? attachmentBytes,
+    String? attachmentFileName,
     String? attachmentBadge,
     String? notes,
   }) {
@@ -103,6 +115,8 @@ class ReportItem {
       specificLocation: specificLocation ?? this.specificLocation,
       category: category ?? this.category,
       imageAttachment: imageAttachment ?? this.imageAttachment,
+      attachmentBytes: attachmentBytes ?? this.attachmentBytes,
+      attachmentFileName: attachmentFileName ?? this.attachmentFileName,
       attachmentBadge: attachmentBadge ?? this.attachmentBadge,
       notes: notes ?? this.notes,
     );

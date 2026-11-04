@@ -112,17 +112,7 @@ class ParkingTooltipMarker extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(width: 4.0),
-                  Text(
-                    '·',
-                    style: TextStyle(
-                      fontSize: 10.5,
-                      height: 1.1,
-                      fontWeight: FontWeight.w800,
-                      color: AppColors.textMuted,
-                    ),
-                  ),
-                  const SizedBox(width: 3.5),
+                  const SizedBox(width: 4.5),
                   Text(
                     _capacityLabel,
                     maxLines: 1,

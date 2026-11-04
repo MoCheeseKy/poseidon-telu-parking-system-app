@@ -4,10 +4,13 @@ import 'package:poseidon/core/constants/app_colors.dart';
 class AppTheme {
   AppTheme._();
 
+  static const String fontFamily = 'Plus Jakarta Sans';
+
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
-      scaffoldBackgroundColor: AppColors.background,
+      fontFamily: fontFamily,
+      scaffoldBackgroundColor: AppColors.pageBackground,
       colorScheme: ColorScheme.fromSeed(
         seedColor: AppColors.primaryRed,
         primary: AppColors.primaryRed,
@@ -20,6 +23,12 @@ class AppTheme {
         centerTitle: false,
         scrolledUnderElevation: 0,
         iconTheme: IconThemeData(color: AppColors.textPrimary),
+        titleTextStyle: TextStyle(
+          fontFamily: fontFamily,
+          fontSize: 17.0,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary,
+        ),
       ),
       bottomSheetTheme: const BottomSheetThemeData(
         backgroundColor: AppColors.background,
